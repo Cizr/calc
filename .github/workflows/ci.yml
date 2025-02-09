@@ -23,3 +23,7 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+      - name: Collect test results
+        run: |
+          python collect_data.py
