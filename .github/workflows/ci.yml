@@ -27,3 +27,9 @@ jobs:
       - name: Collect test results
         run: |
           python collect_data.py
+
+      - name: Upload data.csv as artifact #added artifcat to download csv
+        uses: actions/upload-artifact@v3
+        with:
+          name: data.csv
+          path: data.csv
