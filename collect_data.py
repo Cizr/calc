@@ -1,39 +1,38 @@
 import subprocess
 import pandas as pd
 from pathlib import Path
-
+import re
 
 result = subprocess.run(["pytest", "-v"], capture_output=True, text=True)
 
 print("Test Output:\n", result.stdout)
 
 test_results = []
+error_messages = {}
 
+    match = re.search(r"(test_\w+)\s+FAILED", line)
+    if match:
+        test_name = match.group(1)
+        error_messages[test_name] = ""  
+    elif "assert" in line:  
+        for test in error_messages:
+            if not error_messages[test]:  
+                error_messages[test] = "AssertionError: " + line.strip()
+                break
 
 for line in result.stdout.splitlines():
-    if "::test_" in line and ("PASSED" in line or "FAILED" in line):
-        parts = line.split()
-        test_name = parts[1].split("::")[-1] 
-        status = parts[-1].lower()  
-        error_message = ""
+    match = re.search(r"(test_\w+)\s+(PASSED|FAILED)", line)
+    if match:
+        test_name = match.group(1)
+        status = match.group(2).lower()
 
-        if status == "failed":
-            #Locate detailed error message
-            for failure_line in result.stdout.splitlines():
-                if test_name in failure_line and " - " in failure_line:
-                    error_message = failure_line.split(" - ")[-1]
-                    break
-        
-        #Append
         test_results.append({
             "test_name": test_name,
-            "status": status,
-            "error_message": error_message
+            "result": status,
+            "error_message": error_messages.get(test_name, "") if status == "failed" else ""
         })
 
-
 df = pd.DataFrame(test_results)
-
 
 csv_path = Path("data.csv")
 if csv_path.exists():
@@ -43,8 +42,6 @@ else:
 
 print("✅ data.csv updated successfully.")
 
-
-# Save results to data.csv
 file_exists = Path("data.csv").exists()
 df.to_csv("data.csv", mode="a", index=False, header=not file_exists)
 
