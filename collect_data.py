@@ -1,24 +1,29 @@
 import subprocess
 import pandas as pd
+import re
 from pathlib import Path
 
-#running tests and cap the output
-result = subprocess.run(["pytest"], capture_output=True, text=True)
+# Run tests and capture output
+result = subprocess.run(["pytest", "-v"], capture_output=True, text=True)
 
-#parsing
+# Parse test results
 test_results = []
 for line in result.stdout.splitlines():
-    if "FAILED" in line:
-        test_name = line.split()[0]  #test name exctr
-        error_message = line.split(" - ")[-1]  #same but with error message
-        test_results.append({"test_name": test_name, "result": "failed", "error_message": error_message})
-    elif "PASSED" in line:
-        test_name = line.split()[0]
-        test_results.append({"test_name": test_name, "result": "passed", "error_message": ""})
+    match = re.search(r"(test_\w+)\s+\.\.\.\s+(FAILED|PASSED)", line)
+    if match:
+        test_name, status = match.groups()
+        error_message = ""
+        if status == "FAILED":
+            error_message = "Test failed"  # Placeholder, can be improved
+        test_results.append({"test_name": test_name, "result": status.lower(), "error_message": error_message})
 
-#saving data.csv
+# Convert to DataFrame
 df = pd.DataFrame(test_results)
-if Path("data.csv").exists():
-    df.to_csv("data.csv", mode="a", index=False, header=False)  #and append to file if it exists
+
+# Save results to CSV (append if file exists)
+csv_path = "data.csv"
+if Path(csv_path).exists():
+    df.to_csv(csv_path, mode="a", index=False, header=False, encoding="utf-8")
 else:
-    df.to_csv("data.csv", index=False)  #new file if it doesn't exist
+    df.to_csv(csv_path, index=False, encoding="utf-8")
+
