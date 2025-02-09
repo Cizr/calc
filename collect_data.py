@@ -1,46 +1,46 @@
 import subprocess
 import pandas as pd
-import re
 from pathlib import Path
 
-# Run pytest with verbose output
-result = subprocess.run(["pytest", "-v"], capture_output=True, text=True)
+result = subprocess.run(["pytest"], capture_output=True, text=True)
 
-# Debug: Print test output
 print("Test Output:")
 print(result.stdout)
 
-# Initialize test results list
 test_results = []
-
-# Parse pytest output line by line
 for line in result.stdout.splitlines():
-    match = re.search(r"(test_\w+)\s+\[\d+%\]\s+(PASSED|FAILED)", line)
-    if match:
-        test_name, status = match.groups()
-        error_message = ""
+    if "FAILED" in line:
+        #Extract test name and error message for failed tests
+        test_name = line.split()[0]  # Extract test name
+        error_message = line.split(" - ")[-1]  # Extract error message
+        test_results.append({"test_name": test_name, "result": "failed", "error_message": error_message})
+    elif "PASSED" in line:
+        #Extract test name for passed tests
+        test_name = line.split()[0]  #Extract test name
+        test_results.append({"test_name": test_name, "result": "passed", "error_message": ""})
+    elif "PASSED" not in line and "FAILED" not in line and "::" in line:
+        #Handle cases where the test result is not explicitly marked as PASSED or FAILED
+        parts = line.split("::")
+        if len(parts) >= 2:
+            test_name = parts[-1].split()[0]  #Extract test name
+            if "PASSED" in line:
+                test_results.append({"test_name": test_name, "result": "passed", "error_message": ""})
+            elif "FAILED" in line:
+                error_message = line.split(" - ")[-1]  #Extract error message
+                test_results.append({"test_name": test_name, "result": "failed", "error_message": error_message})
 
-        # Capture error message for failed tests
-        if status == "FAILED":
-            error_line = next((l for l in result.stdout.splitlines() if test_name in l and " - " in l), None)
-            if error_line:
-                error_message = error_line.split(" - ")[-1]
-
-        # Append results
-        test_results.append({"test_name": test_name, "result": status.lower(), "error_message": error_message})
-
-# Debug: Print parsed results
 print("Parsed Results:")
 print(test_results)
 
-# Save results to data.csv
+
 df = pd.DataFrame(test_results)
 if Path("data.csv").exists():
-    df.to_csv("data.csv", mode="a", index=False, header=False)  # Append if file exists
+    #Append
+    df.to_csv("data.csv", mode="a", index=False, header=False)
     print("Appended results to data.csv")
 else:
-    df.to_csv("data.csv", index=False)  # Create new file if not exists
+    
+    df.to_csv("data.csv", index=False)
     print("Created new data.csv")
 
-# Debug: Confirm file creation/update
 print("data.csv updated successfully.")
